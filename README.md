@@ -11,9 +11,9 @@ Execution:
 bash ProcessRRBSLauncher.sh --argument value --flag
 
 Required arguments:
--f/--fastq: Path to directory containing unzipped fastq files of the following format: <pool_prefix>_R1_001.fastq and <pool_prefix>_R2_001.fastq
--g/--genome: Path to bismark-compatible genome
--p/--pipeline: Path to directory containing pipeline (ProcessRRBS.mk) and other scripts
+-f/--fastq: Path to directory containing unzipped fastq files of the following format: <pool_prefix>_R1_001.fastq and <pool_prefix>_R2_001.fastq;
+-g/--genome: Path to bismark-compatible genome;
+-p/--pipeline: Path to directory containing pipeline (ProcessRRBS.mk) and other scripts;
 -t/--target: Target of pipeline (See potential values below)
 
 Potential Values of target argument (in reverse order of execution):
@@ -24,10 +24,10 @@ Potential Values of target argument (in reverse order of execution):
 - demultiplex: execute pipeline up to demultiplexing of fastq files
 
 Optional arguments:
--r/--regions: Bed file containing genomic regions to analyze (required if target specified as 'by_region')
+-r/--regions: Bed file containing genomic regions to analyze (required if target specified as 'by_region');
 -c/--cluster-conifg: path to config file if submitting to cluster (see examples in this directory)
 
 Optional flags:
- --qsub: submit underlying jobs to cluster (requires cluster configuration file provided to -c argument)
- --dry-run: map out pipeline but do not execute
+ --qsub: submit underlying jobs to cluster (requires cluster configuration file provided to -c argument);
+ --dry-run: map out pipeline but do not execute;
  --dag: create directed acyclic graph representing pipeline
