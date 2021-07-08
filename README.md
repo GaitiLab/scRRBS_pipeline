@@ -3,9 +3,9 @@
 Dependencies:
 - Local installation of snakemake (see website for instructions)
 - python
-- bismark/0.14.5
-- bedtools/2.25.0
-- samtools/1.3.1
+- bismark/0.14.5 (or later)
+- bedtools/2.25.0 (or later)
+- samtools/1.3.1 (or later)
 
 Execution:
 bash ProcessRRBSLauncher.sh --argument value --flag
