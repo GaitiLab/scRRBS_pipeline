@@ -1,14 +1,23 @@
-"__default__":
-    "mem":  "10G"
-    "rt":   "20:00:00"
-    "out": "qsub_output"
-    "err": "qsub_error"
+---
+__default__:
+    job-name: RNA.{rule}.{wildcards}
+    partition: all
+    mem: 10G
+    mail-type: END,FAIL
+    mail-user: youremail@example.com
+    cpus-per-task: "2"
+    time: 05:00:00
+    output: ./slurm_logs/%x_%j.out
+    error: ./slurm_logs/%x_%j.out
 bismark_align:
-    "mem": "32G"
-    "rt":  "20:00:00"
+    mem: 50G
+    time:  20:00:00
+    partition: himem
 site_matrix:
-    "mem": "32G"
-    "rt": "20:00:00"
+    mem: 40G
+    time: 20:00:00
+    partition: himem
 region_matrix:
-    "mem": "32G"
-    "rt": "20:00:00"
+    mem: 40G
+    time: 20:00:00
+    partition: himem
