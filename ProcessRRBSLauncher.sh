@@ -127,7 +127,7 @@ then
     then
 	$MY_SNAKEMAKE -s ${MY_PIPELINE}/ProcessRRBS.mk \
                 --configfile ${MY_PATH}/config.yaml \
-                --jobs 5 \
+                --jobs 200 \
                 --nolock \
                 --rerun-incomplete \
                 --latency-wait 60 \
