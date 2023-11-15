@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
-# -V
-# -cwd
-# -l h_rss=5G
+
+#SBATCH --job-name=rrbs_launcher      
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=youremail@example.com  # Replace with a valid email address or use an argument
+#SBATCH --partition=all          
+#SBATCH --ntasks=1
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=4000M
+#SBATCH --time=5-00:00:00
+#SBATCH --output=slurm_outputs/%x_%j.out
+#SBATCH --error=slurm_outputs/%x_%j.out
 
 # Obtain positional arguments from command line
 POSITIONAL=()
@@ -67,7 +76,7 @@ MY_PATH=$(readlink -f ${FASTQ})
 MY_PIPELINE=$(readlink -f ${PIPELINE})
 
 # Echo variable paths to standard output
-echo "Processing files in ${MY_PATH}..."
+echo "Processing samples in ${MY_PATH}..."
 echo "Using reference genome ${MY_GENOME}..."
 
 if [ -n "${REGIONS}" ]
@@ -87,14 +96,6 @@ fi
 # Build config.yaml in same location as fastq files
 cd $MY_PATH
 echo "path: ${MY_PATH}" > config.yaml
-echo "prefixes:" >> config.yaml
-
-prefixes=()
-for file in *_R1_001.fastq; do
-    prefix=`basename $file _R1_001.fastq`
-    echo "- ${prefix}" >> config.yaml
-    prefixes+=("${prefix}")
-done
 
 barcodes=("ACAACC" "ACAGAC" "ACTCAC" "AGAAGG" "AGGATG" "ATCAAG" "ATCGAC" "CAAGAG" "CATGAC" "CCATAG" "CCTTCG" "CGGTAG" "CTATTG" "CTCAGC" "GAAGTC" "GCATTC" "GGTAAC" "GTGAGG" "GTTGAG" "TATCTC" "TCTCTG" "TGACAG" "TGCTGC" "TGTAGG")
 
@@ -124,11 +125,22 @@ if [ -z "${DRY_RUN}" ]
 then
     if [ -n "${QSUB}" ]
     then
-	$MY_SNAKEMAKE -s ${MY_PIPELINE}/ProcessRRBS.mk --configfile ${MY_PATH}/config.yaml --cluster-config ${MY_CLUSTER_CONFIG} \
-		  --cluster "qsub -V -cwd -N ProcessRRBS -pe smp 1 -l h_rt={cluster.rt},h_rss={cluster.mem} -p -10 -o {cluster.out} -e {cluster.err}" \
-		  --jobs 1000 --nolock --rerun-incomplete --latency-wait 15 ${RULE}
+	$MY_SNAKEMAKE -s ${MY_PIPELINE}/ProcessRRBS.mk \
+                --configfile ${MY_PATH}/config.yaml \
+                --jobs 5 \
+                --nolock \
+                --rerun-incomplete \
+                --latency-wait 60 \
+                --cluster-config ${MY_CLUSTER_CONFIG} \
+		        --cluster "sbatch -J {cluster.job-name} -p {cluster.partition} -t {cluster.time} -c {cluster.cpus-per-task} --mem={cluster.mem} -o {cluster.output} -e {cluster.error} --mail-type={cluster.mail-type} --mail-user={cluster.mail-user}" \
+                ${RULE}
     else
-	$MY_SNAKEMAKE -s ${MY_PIPELINE}/ProcessRRBS.mk --configfile ${MY_PATH}/config.yaml --nolock --rerun-incomplete --latency-wait 15 ${RULE}
+	$MY_SNAKEMAKE -s ${MY_PIPELINE}/ProcessRRBS.mk \
+                --configfile ${MY_PATH}/config.yaml \
+                --nolock \
+                --rerun-incomplete \
+                --latency-wait 60 \
+                ${RULE}
     fi
 fi
 

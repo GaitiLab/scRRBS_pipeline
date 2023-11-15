@@ -41,11 +41,12 @@ foreach my $barcode (@barcodes)
 
 my $infile1 = shift;
 my $infile2 = shift;
-my $outfile = "$infile1.counts";
-my $hiOutfile = "$infile1.hiCounts";
-my $summOutfile = "$infile1.summ";
+my $outfile_prefix = shift;
+my $outfile = "$outfile_prefix.counts";
+my $hiOutfile = "$outfile_prefix.hiCounts";
+my $summOutfile = "$outfile_prefix.summ";
 
-my $usage = "usage: splitFastqPair.pl {file1} {file2}\n";
+my $usage = "usage: splitFastqPair.pl {file1} {file2} {output_file_prefix}\n";
 
 die $usage if $infile1 eq "";
 die $usage if $infile2 eq "";
@@ -319,10 +320,10 @@ sub printBarcode
 		if (!exists($files1{$printBarcode}))
 		{
 			my $fh1;
-			open $fh1, ">$infile1.$printBarcode.fastq" or die $!;
+			open $fh1, ">$outfile_prefix.$printBarcode.R1.fastq" or die $!;
 			$files1{$printBarcode} = $fh1;
 			my $fh2;
-			open $fh2, ">$infile2.$printBarcode.fastq" or die $!;
+			open $fh2, ">$outfile_prefix.$printBarcode.R2.fastq" or die $!;
 			$files2{$printBarcode} = $fh2;
 		}
 		my $fh1 = $files1{$printBarcode};
