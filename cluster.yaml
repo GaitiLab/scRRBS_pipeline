@@ -12,6 +12,7 @@ __default__:
 bismark_align:
     mem: 50G
     partition: himem
+    time: "24:00:00"
 site_matrix:
     mem: 40G
     partition: himem
