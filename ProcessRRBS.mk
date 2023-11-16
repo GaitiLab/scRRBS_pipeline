@@ -42,7 +42,8 @@ rule all:
 	input:
 		merged_files,
 		demultiplexed_files,
-		aligned_files
+		aligned_files,
+		extracted_files
 
 # rule sites_only:
 # 	input:

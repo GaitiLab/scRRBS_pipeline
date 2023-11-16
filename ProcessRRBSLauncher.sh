@@ -140,9 +140,9 @@ then
                 --nolock \
                 --rerun-incomplete \
                 --latency-wait 60 \
+                --cores 4 \
                 ${RULE}
     fi
 fi
 
 echo "Done."
-
