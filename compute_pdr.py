@@ -6,22 +6,26 @@ from __future__ import (division,
                         unicode_literals)
 
 import sys
+import os
 import numpy as np
 
 
 def main():
     if "-h" in sys.argv or "--help" in sys.argv:
         print("Prints out the file name, number of discordant reads, number of concordant reads for each file passed in", file=sys.stderr)
-        print("compute_pdr.py\t[CpG_context1.txt CpG_context2.txt ...]", file=sys.stderr)
+        print("compute_pdr.py\t[output_dir]\t[CpG_context1.txt CpG_context2.txt ...]", file=sys.stderr)
         return
 
-    filenames = sys.argv[1:] 
+    output_dir = sys.argv[1]
+    filenames = sys.argv[2:]
+
+    pdr_fd = open(os.path.join(output_dir, "PDR_rrbs.txt"), 'w')
 
     #we need to pass in OB, OT, Run1, Run2
     #read_id, n_meth, n_umeth 
     include_pairs = False
     header = ["FileName", "DiscordantReads", "ConcordantReads"]
-    print(" ".join(header))
+    print(" ".join(header), file=pdr_fd)
     for filename in filenames:
         read_ids = []
         current_read = "" 
@@ -42,7 +46,7 @@ def main():
                 elif not include_pairs:
                     chrm, pos = line_arr[2], int(line_arr[3])
                     if abs(pos - start_pos) >= 90:
-                    continue
+                        continue
                     
 
                 if line_arr[-1] == 'z':
@@ -50,7 +54,7 @@ def main():
                 else:
                     current_meth += 1 
     
-        print(filename, " ".join(list(map(str, compute_pdr(read_ids)))))
+        print(filename, " ".join(list(map(str, compute_pdr(read_ids)))), file=pdr_fd)
     
 def compute_pdr(reads):
     #read_id, umeth, meth

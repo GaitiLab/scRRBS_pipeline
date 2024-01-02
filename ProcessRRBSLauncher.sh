@@ -29,6 +29,11 @@ case $key in
     shift # past argument
     shift # past value
     ;;
+    -e|--efficiency)
+    EFFICIENCY="$2"
+    shift # past argument
+    shift # past value
+    ;;
     -r|--regions)
     REGIONS="$2"
     shift # past argument
@@ -79,6 +84,14 @@ MY_PIPELINE=$(readlink -f ${PIPELINE})
 echo "Processing samples in ${MY_PATH}..."
 echo "Using reference genome ${MY_GENOME}..."
 
+if [ -n "${EFFICIENCY}" ]
+then
+    echo "Using efficiency cutoff of ${EFFICIENCY}"
+else
+    echo "Using default efficiency cutoff of 1%"
+    EFFICIENCY="1.0"
+fi
+
 if [ -n "${REGIONS}" ]
 then
     MY_REGIONS=$(readlink -f ${REGIONS})
@@ -112,6 +125,8 @@ then
 fi
 echo "scripts: ${MY_PIPELINE}" >> config.yaml
 
+echo "efficiency: ${EFFICIENCY}" >> config.yaml
+
 MY_SNAKEMAKE=$(which snakemake)
 
 # Build directed acyclic graph if requested
@@ -138,6 +153,29 @@ then
 	$MY_SNAKEMAKE -s ${MY_PIPELINE}/ProcessRRBS.mk \
                 --configfile ${MY_PATH}/config.yaml \
                 --nolock \
+                --rerun-incomplete \
+                --latency-wait 60 \
+                --cores 4 \
+                ${RULE}
+    fi
+else
+    if [ -n "${QSUB}" ]
+    then
+	$MY_SNAKEMAKE -s ${MY_PIPELINE}/ProcessRRBS.mk \
+                --configfile ${MY_PATH}/config.yaml \
+                --jobs 200 \
+                --nolock \
+                --dry-run \
+                --rerun-incomplete \
+                --latency-wait 60 \
+                --cluster-config ${MY_CLUSTER_CONFIG} \
+		        --cluster "sbatch -J {cluster.job-name} -p {cluster.partition} -t {cluster.time} -c {cluster.cpus-per-task} --mem={cluster.mem} -o {cluster.output} -e {cluster.error} --mail-type={cluster.mail-type} --mail-user={cluster.mail-user}" \
+                ${RULE}
+    else
+	$MY_SNAKEMAKE -s ${MY_PIPELINE}/ProcessRRBS.mk \
+                --configfile ${MY_PATH}/config.yaml \
+                --nolock \
+                --dry-run \
                 --rerun-incomplete \
                 --latency-wait 60 \
                 --cores 4 \

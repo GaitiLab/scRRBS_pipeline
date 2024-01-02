@@ -31,19 +31,20 @@ for sample in sample_dirs:
 		for barcode in config["barcodes"]:
 			aligned_files.append(f"{sample}/aligned/{pool}.{barcode}.R1_bismark_bt2_pe.bam")
 
-extracted_files = []
+status_files = []
 for sample in sample_dirs:
-	for pool in get_pools(sample):
-		for barcode in config["barcodes"]:
-			extracted_files.append(f"{sample}/extracted/{pool}.{barcode}.R1_bismark_bt2_pe.bismark.cov.gz")
-			extracted_files.append(f"{sample}/extracted/CpG_context_{pool}.{barcode}.R1_bismark_bt2_pe.txt")
+    for pool in get_pools(sample):
+        for barcode in config["barcodes"]:
+            status_files.append(f"{sample}/aligned/{pool}.{barcode}.efficiency_checked")
 
 rule all:
 	input:
 		merged_files,
 		demultiplexed_files,
 		aligned_files,
-		extracted_files
+		status_files,
+		expand("{sample}/site_matrix.csv", sample=sample_dirs),
+		expand("{sample}/PDR_rrbs.txt", sample=sample_dirs)		
 
 # rule sites_only:
 # 	input:
@@ -94,33 +95,85 @@ rule bismark_align:
 	shell:
 		"bismark --multicore {threads} -X 1000 --path_to_bowtie $(dirname $(which bowtie2)) --un --ambiguous {config[genome]} -1 {input.r1} -2 {input.r2} -o {wildcards.sample}/aligned/ --temp_dir {wildcards.sample}/aligned/"
 
-rule bismark_extract:
-	input:
-		"{sample}/aligned/{pool}.{barcode}.R1_bismark_bt2_pe.bam"
-	output:
-		"{sample}/extracted/{pool}.{barcode}.R1_bismark_bt2_pe.bismark.cov.gz",
+rule check_alignment_efficiency:
+    input:
+        report="{sample}/aligned/{pool}.{barcode}.R1_bismark_bt2_PE_report.txt"
+    output:
+        marker=temp("{sample}/aligned/{pool}.{barcode}.efficiency_checked")
+    params:
+        cutoff=config['efficiency']
+    run:
+        with open(input.report, 'r') as report_file:
+            for line in report_file:
+                if 'Mapping efficiency:' in line:
+                    efficiency = float(line.split(':')[1].strip().strip('%'))
+                    break
+        status = 'ok' if efficiency >= params.cutoff else 'no'
+        with open(f"{wildcards.sample}/aligned/{wildcards.pool}.{wildcards.barcode}.{status}", 'w') as status_file:
+            status_file.write('')
+        with open(output.marker, 'w') as marker_file:
+            marker_file.write('')
+
+checkpoint bismark_extract:
+    input:
+        ok="{sample}/aligned/{pool}.{barcode}.ok",
+        bam="{sample}/aligned/{pool}.{barcode}.R1_bismark_bt2_pe.bam"
+    output:
+        "{sample}/extracted/{pool}.{barcode}.R1_bismark_bt2_pe.bismark.cov.gz",
 		"{sample}/extracted/CpG_context_{pool}.{barcode}.R1_bismark_bt2_pe.txt"
-	threads: 4
+    shell:
+        "bismark_methylation_extractor --bedgraph --comprehensive {input.bam} -o {wildcards.sample}/extracted/"
+
+from snakemake.io import expand
+
+def get_cov_files(wildcards):
+    ok_files = glob.glob("*/*/*.ok")
+    cov_files = []
+    for ok_file in ok_files:
+        parts = ok_file.split('/')
+        sample = parts[0]
+        pool, barcode = parts[2].split('.')[0:2]
+        cov_file = f"{sample}/extracted/{pool}.{barcode}.R1_bismark_bt2_pe.bismark.cov.gz"
+        cov_files.append(cov_file)
+    return cov_files
+
+# Use the function in the rule
+rule site_matrix:
+    input:
+        cov=get_cov_files
+    output:
+        "{sample}/site_matrix.csv"
+    shell:
+        "python {config[scripts]}/build_features.py {wildcards.sample} {input.cov}"
+
+def get_extracted_txt_files(wildcards):
+	ok_files = glob.glob("*/*/*.ok")
+	txt_files = []
+	for ok_file in ok_files:
+		parts = ok_file.split('/')
+		sample = parts[0]
+		pool, barcode = parts[2].split('.')[0:2]
+		txt_file = f"{sample}/extracted/CpG_context_{pool}.{barcode}.R1_bismark_bt2_pe.txt"
+		txt_files.append(txt_file)
+	return txt_files
+
+rule pdr:
+	input:
+		extracted_txt=get_extracted_txt_files
+	output:
+		"{sample}/PDR_rrbs.txt"
 	shell:
-		"bismark_methylation_extractor --multicore {threads} --bedgraph --comprehensive {input} -o {wildcards.sample}/extracted/"
+		"python {config[scripts]}/compute_pdr.py {wildcards.sample} {input}"
 
-# rule pdr:
-# 	input:
-# 		expand("CpG_context_{prefix}.{barcode}.R1.fastq_bismark_bt2_pe.txt", prefix=config["prefixes"], barcode=config["barcodes"])
-# 	output:
-# 		"PDR_rrbs.txt"
-# 	shell:
-# 		"python {config[scripts]}/compute_pdr.py {input} > {output}"
-
-# rule qc_stats:
-# 	input:
-# 		"PDR_rrbs.txt"
-# 	params:
-# 		cells=expand("{prefix}.{barcode}", prefix=config["prefixes"], barcode=config["barcodes"])
-# 	output:
-# 		"QC_stats_rrbs.csv"
-# 	shell:
-# 		"python {config[scripts]}/cov_batch.py {params.cells} {input} rrbs"
+rule qc_stats:
+	input:
+		"PDR_rrbs.txt"
+	params:
+		cells=expand("{prefix}.{barcode}", prefix=config["prefixes"], barcode=config["barcodes"])
+	output:
+		"QC_stats_rrbs.csv"
+	shell:
+		"python {config[scripts]}/cov_batch.py {params.cells} {input} rrbs"
 
 # rule pairwise_stats:
 # 	input:
@@ -130,13 +183,7 @@ rule bismark_extract:
 # 	shell:
 # 		"python {config[scripts]}/compute_pair.py {input} > {output}"
 
-# rule site_matrix:
-# 	input:
-# 		expand("{prefix}.{barcode}.R1.fastq_bismark_bt2_pe.bismark.cov.gz", prefix=config["prefixes"], barcode=config["barcodes"])
-# 	output:
-# 		"site_matrix.csv"
-# 	shell:
-# 		"python {config[scripts]}/build_features.py {input} > {output}"
+
 
 # rule site_bed:
 # 	input:

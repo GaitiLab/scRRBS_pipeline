@@ -6,11 +6,13 @@ from __future__ import (division,
                         unicode_literals)
 
 import sys
+import os
 import numpy as np
 import gzip as gz
 
 
-filenames = sys.argv[1:]
+output_dir = sys.argv[1]
+filenames = sys.argv[2:]
 
 from random import random
 print(filenames, len(filenames), file=sys.stderr)
@@ -73,16 +75,17 @@ filenames = [filename.split("/")[-1] for filename in filenames]
 
 complete_data = [ len(filenames) - sites[site].tolist().count("-") for site in sites ]
 
-stat_fd = open("stats.txt", 'w')
+stat_fd = open(os.path.join(output_dir, "stats.txt"), 'w')
 for i in range(1, len(filenames) + 1):
     print(i, complete_data.count(i), complete_data.count(i) / (len(complete_data) + 0.0), file=stat_fd)
 stat_fd.close()
 
 print("outputting results", file=sys.stderr)
 
-print(",".join(["site"] + filenames))
+with open(os.path.join(output_dir, "site_matrix.csv"), 'w') as out_fd:
+    out_fd.write(",".join(["site"] + filenames) + '\n')
+    for site in sorted(sites):
+        out_fd.write(",".join([site] + list(map(str, sites[site]))) + '\n')
 
-for site in sorted(sites):
-    print(",".join([site] + list(map(str, sites[site]))))
 
 
